@@ -1,0 +1,9 @@
+{
+  "name": "chess-platform",
+  "private": true,
+  "scripts": {
+    "dev:client": "cd chess-client && pnpm dev",
+    "dev:server": "cd chess-server && pnpm dev",
+    "dev": "concurrently \"pnpm dev:client\" \"pnpm dev:server\""
+  }
+}
