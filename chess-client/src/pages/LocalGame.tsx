@@ -58,7 +58,7 @@ export default function LocalGame() {
     <div style={styles.page}>
       {/* Header */}
       <div style={styles.header}>
-        <Link to="/dashboard" style={styles.backLink}>← Dashboard</Link>
+        <Link to="/" style={styles.backLink}>← Home</Link>
         <h2 style={styles.title}>Local Game</h2>
         <button
           onClick={() => setFlipped((f) => !f)}
@@ -134,16 +134,14 @@ export default function LocalGame() {
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles = {
   page: {
     minHeight: '100vh',
-    padding: '20px',
+    padding: '24px 32px',
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
-    maxWidth: '1000px',
-    margin: '0 auto',
   },
   header: {
     display: 'flex',
@@ -174,6 +172,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '24px',
     alignItems: 'flex-start',
     flexWrap: 'wrap' as const,
+    justifyContent: 'center',
   },
   boardSide: {
     flex: '0 0 auto',
@@ -262,4 +261,4 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     fontWeight: 500,
   },
-}
+} as const

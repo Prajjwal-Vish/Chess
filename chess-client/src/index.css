@@ -3,57 +3,87 @@
 @import 'chessground/assets/chessground.cburnett.css';
 @import "tailwindcss";
 
+/* ── SnapFen design tokens ─────────────────────────────────── */
+@theme {
+  /* Backgrounds */
+  --color-bg-base:        #07091a;
+  --color-bg-mid:         #0a1027;
+  --color-bg-elevated:    #131c3d;
+  --color-bg-panel:       rgba(255,255,255,0.025);
+  --color-bg-panel-hover: rgba(255,255,255,0.04);
+  --color-bg-board:       #1a1f3a;
+
+  /* Brand */
+  --color-brand-blue:   #5b8def;
+  --color-brand-purple: #a374f0;
+
+  /* Text */
+  --color-text-primary:   #ffffff;
+  --color-text-secondary: #c9d1e2;
+  --color-text-tertiary:  #8892a8;
+  --color-text-muted:     #6b7488;
+
+  /* Borders */
+  --color-border-subtle:  rgba(255,255,255,0.06);
+  --color-border-default: rgba(255,255,255,0.07);
+  --color-border-strong:  rgba(255,255,255,0.10);
+  --color-border-brand:   rgba(91,141,239,0.35);
+
+  /* Semantic accents */
+  --color-accent-success:  #1d9e75;
+  --color-accent-warning:  #ef9f27;
+  --color-accent-mistake:  #d85a30;
+  --color-accent-danger:   #e24b4a;
+  --color-accent-info:     #5b8def;
+
+  /* Board — wood theme */
+  --color-board-light: #e8d5b7;
+  --color-board-dark:  #7a5a3a;
+
+  /* Border radius */
+  --radius-panel: 10px;
+  --radius-hero:  12px;
+  --radius-modal: 14px;
+  --radius-pill:  999px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+}
+
+/* Gradient shorthands and legacy auth-page tokens */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --brand-gradient: linear-gradient(135deg, #5b8def, #a374f0);
+  --page-bg: radial-gradient(ellipse at top left, #131c3d 0%, #0a1027 45%, #07091a 100%);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* legacy — keep so existing auth components don't break */
+  --text:          #9ca3af;
+  --text-h:        #f3f4f6;
+  --bg:            #16171d;
+  --border:        #2e303a;
+  --code-bg:       #1f2028;
+  --accent:        #c084fc;
+  --accent-bg:     rgba(192,132,252,0.15);
+  --accent-border: rgba(192,132,252,0.5);
+  --shadow:        rgba(0,0,0,0.4) 0 10px 15px -3px, rgba(0,0,0,0.25) 0 4px 6px -2px;
+  --sans:          system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono:          ui-monospace, Consolas, monospace;
+}
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+/* Base */
+html, body {
+  background: #07091a;
+  color: #c9d1e2;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
+body { margin: 0; }
 
 #root {
   width: 100%;
@@ -65,50 +95,51 @@
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-}
+/* Custom utilities */
+@layer utilities {
+  /* 0.5px borders — intentional per design spec */
+  .border-half   { border-width: 0.5px; border-style: solid; }
+  .border-t-half { border-top-width: 0.5px; border-top-style: solid; }
+  .border-b-half { border-bottom-width: 0.5px; border-bottom-style: solid; }
+  .border-r-half { border-right-width: 0.5px; border-right-style: solid; }
+  .border-l-half { border-left-width: 0.5px; border-left-style: solid; }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
+  /* Vertical dividers between flex children */
+  .divide-x-half > * + * { border-left: 0.5px solid var(--color-border-default); }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  /* Gradient text (logo wordmark, nav links) */
+  .text-brand-gradient {
+    background: linear-gradient(90deg, #5b8def, #a374f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  /* Background gradients */
+  .bg-brand-gradient { background: linear-gradient(135deg, #5b8def, #a374f0); }
+  .bg-page           { background: radial-gradient(ellipse at top left, #131c3d 0%, #0a1027 45%, #07091a 100%); }
+  .bg-modal-panel    { background: linear-gradient(135deg, #131c3d 0%, #0a1027 100%); }
+  .bg-engine-panel   { background: linear-gradient(135deg, rgba(163,116,240,0.12) 0%, rgba(91,141,239,0.08) 100%); }
+  .bg-timer-active   { background: linear-gradient(135deg, rgba(91,141,239,0.28), rgba(163,116,240,0.18)); }
+
+  /* Backdrop for modals */
+  .backdrop-modal {
+    background: rgba(7,9,26,0.75);
+    backdrop-filter: blur(8px);
   }
-}
-p {
-  margin: 0;
+
+  /* Box-shadow presets */
+  .shadow-modal { box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 60px rgba(91,141,239,0.1); }
+  .glow-timer   { box-shadow: 0 0 18px rgba(91,141,239,0.35); }
+
+  /* Status dot glows */
+  .glow-dot-success { box-shadow: 0 0 8px rgba(29,158,117,0.6); }
+  .glow-dot-warning { box-shadow: 0 0 8px rgba(239,159,39,0.6); }
+  .glow-dot-danger  { box-shadow: 0 0 8px rgba(226,75,74,0.6); }
+  .glow-dot-purple  { box-shadow: 0 0 8px rgba(163,116,240,0.7); }
+  .glow-dot-blue    { box-shadow: 0 0 8px rgba(91,141,239,0.6); }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

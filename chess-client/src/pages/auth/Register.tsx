@@ -41,7 +41,7 @@ export default function Register() {
     try {
       const data = await authApi.register(form)
       setAuth(data.user, data.accessToken)
-      navigate('/dashboard')
+      navigate('/')
     } catch (err: unknown) {
       setServerError(err instanceof Error ? err.message : 'Registration failed')
     } finally {

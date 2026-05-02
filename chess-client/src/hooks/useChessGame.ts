@@ -158,7 +158,7 @@ export function useChessGame(startingFen?: string) {
     [syncBoard]
   )
 
-  const resign = useCallback((color: 'white' | 'black') => {
+  const resign = useCallback((_color: 'white' | 'black') => {
     setGameState((prev) => ({ ...prev, status: 'resigned' }))
     cgApiRef.current?.set({ movable: { color: undefined, dests: new Map() } })
   }, [])

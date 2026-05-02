@@ -24,7 +24,7 @@ export default function Login() {
     try {
       const data = await authApi.login(form)
       setAuth(data.user, data.accessToken)
-      navigate('/dashboard')
+      navigate('/')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
