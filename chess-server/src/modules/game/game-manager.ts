@@ -3,60 +3,110 @@ import { nanoid } from 'nanoid'
 import { Game } from './game.js'
 import { GAME_EVENTS } from './game.events.js'
 
+interface PendingUser {
+  socket: Socket
+  userId: string
+  username: string
+}
+
 export class GameManager {
   private games = new Map<string, Game>()
-  private pendingUser: { socket: Socket; userId: string } | null = null
+  private pendingUsers = new Map<string, PendingUser>() // keyed by timeControl
+  private playerGames = new Map<string, string>()        // userId → gameId
 
-  async addUser(socket: Socket, userId: string) {
-    // Guard: same socket already pending (e.g. double init_game)
-    if (this.pendingUser?.socket.id === socket.id) return
+  async addUser(socket: Socket, userId: string, username: string, timeControl: string) {
+    const existing = this.pendingUsers.get(timeControl)
 
-    if (this.pendingUser) {
-      const { socket: p1, userId: p1Id } = this.pendingUser
-      this.pendingUser = null
+    if (existing?.socket.id === socket.id) return
 
-      // Randomly assign colors
+    if (existing) {
+      this.pendingUsers.delete(timeControl)
+
       const [white, black] =
         Math.random() < 0.5
-          ? [{ socket: p1, userId: p1Id }, { socket, userId }]
-          : [{ socket, userId }, { socket: p1, userId: p1Id }]
+          ? [{ socket: existing.socket, userId: existing.userId, username: existing.username },
+             { socket, userId, username }]
+          : [{ socket, userId, username },
+             { socket: existing.socket, userId: existing.userId, username: existing.username }]
 
-      const game = new Game(nanoid(12), white, black)
+      const game = new Game(nanoid(12), white, black, timeControl)
       this.games.set(game.id, game)
+      this.playerGames.set(white.userId, game.id)
+      this.playerGames.set(black.userId, game.id)
       await game.init()
     } else {
-      this.pendingUser = { socket, userId }
+      this.pendingUsers.set(timeControl, { socket, userId, username })
       socket.emit(GAME_EVENTS.WAITING)
     }
   }
 
-  async handleMove(socket: Socket, from: string, to: string) {
+  async handleMove(socket: Socket, from: string, to: string, promotion?: string) {
     const game = this.findGame(socket.id)
     if (!game) {
       socket.emit(GAME_EVENTS.GAME_ERROR, { message: 'No active game' })
       return
     }
-    await game.makeMove(socket, from, to)
-    if (game.isOver()) this.games.delete(game.id)
+    await game.makeMove(socket, from, to, promotion)
+    if (game.isOver()) this.cleanupGame(game.id)
+  }
+
+  async handleFlag(socket: Socket) {
+    const game = this.findGame(socket.id)
+    if (!game) return
+    await game.flag(socket)
+    if (game.isOver()) this.cleanupGame(game.id)
   }
 
   async handleResign(socket: Socket) {
     const game = this.findGame(socket.id)
     if (!game) return
     await game.resign(socket)
-    this.games.delete(game.id)
+    this.cleanupGame(game.id)
   }
 
   async handleDisconnect(socket: Socket) {
-    if (this.pendingUser?.socket.id === socket.id) {
-      this.pendingUser = null
-      return
+    // Remove from pending queue if waiting
+    for (const [tc, pending] of this.pendingUsers) {
+      if (pending.socket.id === socket.id) {
+        this.pendingUsers.delete(tc)
+        return
+      }
     }
+    // Schedule a 60-second grace period before forfeiting
     const game = this.findGame(socket.id)
     if (game) {
-      await game.abandon(socket)
-      this.games.delete(game.id)
+      game.scheduleAbandon(socket, () => {
+        this.cleanupGame(game.id)
+      })
     }
+  }
+
+  async handleReconnect(socket: Socket, userId: string, gameId: string) {
+    const registeredGameId = this.playerGames.get(userId)
+    if (!registeredGameId || registeredGameId !== gameId) {
+      socket.emit(GAME_EVENTS.GAME_ERROR, { message: 'Game not found or already over' })
+      return
+    }
+    const game = this.games.get(gameId)
+    if (!game || game.isOver()) {
+      this.playerGames.delete(userId)
+      socket.emit(GAME_EVENTS.GAME_ERROR, { message: 'Game not found or already over' })
+      return
+    }
+    const ok = game.reconnectPlayer(socket, userId)
+    if (!ok) {
+      socket.emit(GAME_EVENTS.GAME_ERROR, { message: 'Player not in game' })
+    }
+  }
+
+  private cleanupGame(gameId: string) {
+    const game = this.games.get(gameId)
+    if (game) {
+      const [u1, u2] = game.getPlayerUserIds()
+      this.playerGames.delete(u1)
+      this.playerGames.delete(u2)
+    }
+    this.games.delete(gameId)
   }
 
   private findGame(socketId: string): Game | undefined {

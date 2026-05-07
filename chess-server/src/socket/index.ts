@@ -20,13 +20,14 @@ export function setupSocket(app: FastifyInstance) {
   const gameManager = new GameManager()
 
   // Authenticate every connection via the JWT access token.
-  // JWT is signed as { sub: userId, username } — use payload.sub, not payload.id.
+  // JWT is signed as { sub: userId, username } — use payload.sub for userId.
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined
     if (!token) return next(new Error('Unauthorized'))
     try {
-      const payload = app.jwt.verify<{ sub: string }>(token)
+      const payload = app.jwt.verify<{ sub: string; username: string }>(token)
       socket.data.userId = payload.sub
+      socket.data.username = payload.username ?? 'Anonymous'
       next()
     } catch {
       next(new Error('Unauthorized'))
@@ -35,15 +36,30 @@ export function setupSocket(app: FastifyInstance) {
 
   io.on('connection', (socket) => {
     const userId = socket.data.userId as string
+    const username = socket.data.username as string
 
-    socket.on(GAME_EVENTS.INIT_GAME, () => {
-      gameManager.addUser(socket, userId).catch(console.error)
+    socket.on(GAME_EVENTS.INIT_GAME, (payload?: { timeControl?: string }) => {
+      const tc = typeof payload?.timeControl === 'string' ? payload.timeControl : '5+0'
+      gameManager.addUser(socket, userId, username, tc).catch(console.error)
     })
 
-    socket.on(GAME_EVENTS.MOVE, (payload: { from: string; to: string }) => {
-      if (typeof payload?.from === 'string' && typeof payload?.to === 'string') {
-        gameManager.handleMove(socket, payload.from, payload.to).catch(console.error)
+    socket.on(GAME_EVENTS.RECONNECT_GAME, (payload?: { gameId?: string }) => {
+      const gameId = typeof payload?.gameId === 'string' ? payload.gameId : null
+      if (!gameId) {
+        socket.emit(GAME_EVENTS.GAME_ERROR, { message: 'Missing gameId' })
+        return
       }
+      gameManager.handleReconnect(socket, userId, gameId).catch(console.error)
+    })
+
+    socket.on(GAME_EVENTS.MOVE, (payload: { from: string; to: string; promotion?: string }) => {
+      if (typeof payload?.from === 'string' && typeof payload?.to === 'string') {
+        gameManager.handleMove(socket, payload.from, payload.to, payload.promotion).catch(console.error)
+      }
+    })
+
+    socket.on(GAME_EVENTS.FLAG, () => {
+      gameManager.handleFlag(socket).catch(console.error)
     })
 
     socket.on(GAME_EVENTS.RESIGN, () => {

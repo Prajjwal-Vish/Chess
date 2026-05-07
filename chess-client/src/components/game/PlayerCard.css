@@ -1,0 +1,54 @@
+.pc-card {
+  display: flex;
+  align-items: center;
+  gap: var(--kn-sp2);
+  padding: var(--kn-sp1) var(--kn-sp2);
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+.pc-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  flex-shrink: 0;
+  user-select: none;
+}
+.pc-avatar--white { background: var(--kn-player-w); color: #1a1a1a; }
+.pc-avatar--black { background: var(--kn-player-b); color: #1a1a1a; }
+
+.pc-name {
+  font-size: 0.8125rem;
+  color: var(--kn-text-sec);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.pc-clock {
+  margin-left: auto;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--kn-surface);
+  padding: var(--kn-sp1) var(--kn-sp3);
+  border-radius: var(--kn-r-md);
+  flex-shrink: 0;
+  color: var(--kn-text-sec);
+  transition: background 0.2s, color 0.2s;
+}
+.pc-clock--active {
+  background: var(--kn-accent);
+  color: #fff;
+}
+.pc-clock--danger {
+  color: var(--kn-danger) !important;
+}

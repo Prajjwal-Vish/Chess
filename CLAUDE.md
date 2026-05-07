@@ -51,7 +51,7 @@ docker-compose up -d   # Start PostgreSQL 16 (port 5432) and Redis 7 (port 6379)
 
 **Authentication flow**: JWT access tokens (15m expiry, in-memory on client) + refresh tokens (7-day, HttpOnly cookie). Refresh tokens are hashed with SHA-256 before storage and rotated on each use (one-time-use).
 
-**Installed but not yet wired**: Socket.io (real-time), BullMQ (job queues for engine analysis / image-to-FEN).
+**Wired**: Socket.IO for real-time online games (see Online Game Architecture below). **Not yet wired**: BullMQ (job queues for engine analysis / image-to-FEN).
 
 ### Frontend (`chess-client/src/`)
 
@@ -61,7 +61,7 @@ docker-compose up -d   # Start PostgreSQL 16 (port 5432) and Redis 7 (port 6379)
 
 **API client**: `src/api/client.ts` — custom `apiRequest` wrapping Fetch, attaches Bearer token, sends cookies. Base URL hardcoded to `http://localhost:3001`.
 
-**Routing**: React Router DOM 7. Public routes: `/login`, `/register`. Protected routes wrapped in `ProtectedRoute` (redirects to `/login` if not authenticated). Current routes: `/dashboard`, `/play/local`.
+**Routing**: React Router DOM 7. Public routes: `/login`, `/register`. Protected routes wrapped in `ProtectedRoute` (redirects to `/login` if not authenticated). Current routes: `/dashboard`, `/play/local`, `/play/online`.
 
 **Chess logic**:
 - `chess.js`: move validation, FEN generation, PGN export
@@ -116,52 +116,42 @@ Full schema migrated to Neon PostgreSQL. Tables:
 
 ---
 
-## Online Game Architecture (Next Major Feature)
+## Online Game Architecture (Implemented)
 
 ### Overview
-Real-time games use Socket.IO (already installed, not yet wired). The core pattern is:
-- **GameManager** — singleton that holds all active in-memory games, one `pendingUser` slot (not a queue — at most one user waits at a time), routes incoming socket events to the right game
-- **Game** — per-game class holding player1 socket, player2 socket, a `chess.js` Chess instance for server-side validation, moves array, startTime, gameId (FK to `games` table)
+Real-time games use Socket.IO. The pattern:
+- **GameManager** (`src/modules/game/game-manager.ts`) — singleton, one `pendingUser` slot, routes socket events to the right game
+- **Game** (`src/modules/game/game.ts`) — per-game class with player sockets, chess.js board, per-player timers (10 min default), DB persistence
 
 ### Socket.IO Event Protocol
 | Direction | Event | Payload |
 |---|---|---|
-| Client → Server | `init_game` | `{}` (authenticated user wants to play) |
-| Server → Client | `game_init` | `{ color: 'white'|'black', gameId }` |
-| Client → Server | `move` | `{ from: string, to: string }` |
-| Server → Client | `move` | `{ from, to, fen }` (opponent's move) |
+| Client → Server | `init_game` | `{}` |
+| Server → Client | `waiting` | `{}` |
+| Server → Client | `game_init` | `{ color, gameId, whiteUsername, blackUsername, whiteMs, blackMs }` |
+| Client → Server | `move` | `{ from, to, promotion? }` |
+| Server → Client | `move_made` | `{ from, to, san, fen, whiteMs, blackMs }` (sent to both players) |
+| Client → Server | `resign` | `{}` |
+| Client → Server | `flag` | `{}` (emit when own clock hits 0) |
 | Server → Client | `game_over` | `{ winner: 'white'|'black'|'draw', reason }` |
 
-### Implementation Plan
-```
-chess-server/src/modules/game/
-  game.ts           # Game class — chess.js board, players, moves, DB persistence
-  game-manager.ts   # GameManager — Map<gameId, Game>, pendingUser slot
-  game.events.ts    # Event name constants (avoid magic strings)
-  game.socket.ts    # Socket.IO namespace setup + event handler registration
-```
-
-- Use Socket.IO rooms (`socket.join(gameId)`) so moves are broadcast to both players without manual filtering
-- Install `chess.js` in `chess-server` (same package already used on the client) for server-side move validation
-- After each valid move: persist to `moves` table immediately, then emit to opponent — DB write happens synchronously before emitting so recovery is always possible
-- On `game_over`: update `games.status` and `games.result` in DB
-
-### In-Memory + DB Recovery Pattern
-- In-memory `Game` objects allow instant move validation without a DB round-trip per move
-- Every valid move is written to `moves` table before the opponent is notified
-- If the server restarts: on reconnect the client sends its `gameId`, server reloads moves from DB and reconstructs the `chess.js` board state
-- Stateful servers are unavoidable for chess (validation needs current board); DB is the recovery source of truth
+### Key Implementation Details
+- Socket auth: JWT token verified in middleware, `socket.data.userId` + `socket.data.username` set
+- `move_made` is sent to **both** players (not just opponent) so the mover also gets authoritative time sync
+- Server deducts elapsed time from the mover's clock after each move; flags if time ≤ 0
+- Every valid move is written to `moves` table before emitting; DB is the recovery source of truth
+- Client-side timer: 100ms interval decrements active player's clock; overridden by server time on each `move_made`
 
 ### Scaling (Future — do not build yet)
-- **Phase 1 (sharding)**: Route both players in the same game to the same server instance. Sufficient for < ~5k spectators per room.
-- **Phase 2 (Redis pub/sub)**: Multiple Socket.IO servers all subscribe to a Redis channel per game room. Any server can receive a move and publish it; all other servers relay it to their connected clients. Works for 100k+ spectators. Redis is already in the stack (BullMQ uses it).
+- **Phase 1 (sharding)**: Route both players in the same game to the same server instance.
+- **Phase 2 (Redis pub/sub)**: Multiple Socket.IO servers subscribe to a Redis channel per game room. Redis is already in the stack.
 
 ---
 
 ## Next Steps (in order)
-1. **Online games** — Wire Socket.IO, implement GameManager + Game classes, `init_game` matchmaking, real-time move sync, game persistence to DB
-2. Save games to DB — already handled as part of step 1
-3. Game history page
-4. Engine analysis — BullMQ + Stockfish worker
-5. Ratings system
+1. ~~**Online games**~~ — Done. Socket.IO wired, matchmaking, real-time moves, DB persistence, timers, usernames, pawn promotion dialog.
+2. Game history page
+3. **Play vs engine** — Stockfish.js (WASM) loaded in browser via Web Worker; no server involvement. Lichess approach.
+4. Engine analysis — BullMQ + Stockfish worker (server-side, deeper analysis)
+5. Ratings system (Glicko-2 update after each online game)
 6. Snapfen integration

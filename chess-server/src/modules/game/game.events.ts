@@ -1,8 +1,10 @@
 export const GAME_EVENTS = {
   // Client → Server
   INIT_GAME: 'init_game',
+  RECONNECT_GAME: 'reconnect_game',
   MOVE: 'move',
   RESIGN: 'resign',
+  FLAG: 'flag',
   // Server → Client
   GAME_INIT: 'game_init',
   MOVE_MADE: 'move_made',

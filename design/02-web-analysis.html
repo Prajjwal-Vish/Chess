@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knightly — Analysis (Web)</title>
+<style>
+  :root {
+    --bg-app: #1f1d1a;
+    --bg-surface: #2a2722;
+    --bg-surface-2: #1a1815;
+    --bg-elevated: #3a3631;
+    --text-primary: #e8e6e1;
+    --text-secondary: #d4d2cb;
+    --text-muted: #8a8780;
+    --accent: #4a8a3f;
+    --player-white: #5DCAA5;
+    --player-black: #AFA9EC;
+    --danger: #E24B4A;
+    --warning: #BA7517;
+    --info: #185FA5;
+    --board-light: #d8b48a;
+    --board-dark: #8b5e3c;
+    --highlight-good: rgba(29,158,117,0.55);
+    --highlight-bad: rgba(163,45,45,0.6);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+
+    --nav-width: clamp(60px, 12vw, 200px);
+    --eval-width: 22px;
+    --side-panel-width: clamp(220px, 22vw, 320px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: var(--nav-width) var(--eval-width) 1fr var(--side-panel-width);
+    height: 100vh; height: 100dvh;
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  /* NAV — same as live play */
+  .nav { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .nav__brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); margin-bottom: var(--space-2); }
+  .nav__logo { width: 18px; height: 18px; border-radius: var(--radius-sm); background: var(--accent); flex-shrink: 0; }
+  .nav__brand-name { font-size: 0.875rem; font-weight: 500; }
+  .nav__item {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8125rem; color: var(--text-muted);
+    border-radius: var(--radius-md); cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav__item:hover { color: var(--text-secondary); background: var(--bg-surface); }
+  .nav__item--active { color: var(--text-secondary); background: var(--bg-surface); }
+  @media (max-width: 900px) {
+    .nav__label, .nav__brand-name { display: none; }
+    .nav__item { justify-content: center; padding: var(--space-2); }
+    .nav__brand { justify-content: center; }
+  }
+
+  /* EVAL BAR — vertical, sized to match board height */
+  .eval-bar {
+    background: var(--bg-surface-2);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+  .eval-bar__white { background: #d4d2cb; transition: flex 0.3s ease; }
+  .eval-bar__black { background: var(--bg-surface-2); transition: flex 0.3s ease; }
+  .eval-bar__readout {
+    position: absolute;
+    left: 50%; transform: translate(-50%, -50%);
+    font-size: 0.5625rem; font-weight: 500;
+    color: #1a1815; background: #d4d2cb;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* CENTER COLUMN */
+  .play-area { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; min-height: 0; }
+  .player-card { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); flex-shrink: 0; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6875rem; font-weight: 500; flex-shrink: 0;
+  }
+  .avatar--opp { background: var(--player-black); color: #1a1a1a; }
+  .avatar--me { background: var(--player-white); color: #1a1a1a; }
+  .player-name { font-size: 0.8125rem; }
+  .move-tags { margin-left: auto; display: flex; gap: var(--space-1); font-size: 0.6875rem; }
+  .tag {
+    padding: 2px var(--space-2);
+    border-radius: 3px;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+  }
+  .tag--blunder { background: #A32D2D; }
+  .tag--mistake { background: var(--warning); }
+  .tag--brilliant { background: #1D9E75; }
+  .tag--good { background: var(--info); }
+
+  .board-wrapper { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .board {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: min(100%, calc(100vh - 200px));
+    max-height: 100%;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    overflow: hidden;
+  }
+  .sq--light { background: var(--board-light); }
+  .sq--dark { background: var(--board-dark); }
+  .sq--bad { background: var(--highlight-bad); }
+  .sq--good { background: var(--highlight-good); }
+
+  /* PLAYBACK CONTROLS */
+  .playback {
+    display: flex; align-items: center; justify-content: center;
+    gap: var(--space-1); padding: var(--space-2) 0;
+    flex-shrink: 0;
+  }
+  .pb-btn {
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    color: var(--text-secondary);
+    width: 2rem; height: 1.75rem;
+    border-radius: var(--radius-sm); cursor: pointer;
+  }
+  .pb-btn--play {
+    background: var(--accent); border: none; color: #fff;
+    width: 2.25rem;
+  }
+
+  /* RIGHT SIDE PANEL */
+  .side-panel { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; min-height: 0; }
+  .panel { background: var(--bg-surface); border-radius: var(--radius-md); padding: var(--space-3); }
+  .panel__label {
+    font-size: 0.6875rem; color: var(--text-muted);
+    letter-spacing: 0.04em; margin-bottom: var(--space-2);
+    text-transform: uppercase;
+  }
+
+  .engine__eval {
+    font-size: 1.125rem; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: var(--space-1);
+  }
+  .engine__line {
+    font-size: 0.6875rem; color: var(--text-muted);
+    font-family: ui-monospace, "SF Mono", monospace;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .multi-pv {
+    display: flex; gap: var(--space-1); margin-top: var(--space-2);
+  }
+  .pv {
+    flex: 1; background: var(--bg-app);
+    padding: var(--space-1) var(--space-2);
+    border-radius: 3px;
+  }
+  .pv__label { font-size: 0.5625rem; color: var(--text-muted); text-transform: uppercase; }
+  .pv__eval { font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
+
+  .moves { flex: 1; overflow-y: auto; min-height: 0; }
+  .moves__grid {
+    display: grid; grid-template-columns: 1.5rem 1fr 1fr;
+    gap: var(--space-1) var(--space-2);
+    font-size: 0.75rem; font-variant-numeric: tabular-nums;
+  }
+  .moves__num { color: var(--text-muted); }
+  .moves__current { background: var(--accent); color: #fff; padding: 0 var(--space-1); border-radius: 3px; }
+  .moves__bad { color: var(--danger); }
+  .moves__inaccurate { color: var(--warning); }
+
+  .accuracy { font-size: 0.75rem; }
+  .accuracy__row { display: flex; justify-content: space-between; padding: var(--space-1) 0; }
+  .accuracy__white { color: var(--player-white); }
+  .accuracy__black { color: var(--player-black); }
+  .accuracy__pct { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <nav class="nav">
+    <div class="nav__brand">
+      <div class="nav__logo"></div>
+      <span class="nav__brand-name">Knightly</span>
+    </div>
+    <div class="nav__item"><span>♟</span><span class="nav__label">Play</span></div>
+    <div class="nav__item"><span>⚡</span><span class="nav__label">Puzzles</span></div>
+    <div class="nav__item"><span>📚</span><span class="nav__label">Learn</span></div>
+    <div class="nav__item nav__item--active"><span>📊</span><span class="nav__label">Analyze</span></div>
+    <div class="nav__item"><span>👥</span><span class="nav__label">Friends</span></div>
+  </nav>
+
+  <div class="eval-bar" aria-label="Evaluation: +1.4">
+    <div class="eval-bar__white" style="flex: 0.65"></div>
+    <div class="eval-bar__black" style="flex: 0.35"></div>
+    <div class="eval-bar__readout" style="top: 35%">+1.4</div>
+  </div>
+
+  <main class="play-area">
+    <div class="player-card">
+      <div class="avatar avatar--opp">CR</div>
+      <span class="player-name">Captain Rook</span>
+      <div class="move-tags">
+        <span class="tag tag--blunder">2 ?</span>
+        <span class="tag tag--mistake">3 ?!</span>
+      </div>
+    </div>
+
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="player-card">
+      <div class="avatar avatar--me">YO</div>
+      <span class="player-name">You</span>
+      <div class="move-tags">
+        <span class="tag tag--brilliant">1 ★</span>
+        <span class="tag tag--good">12 ✓</span>
+      </div>
+    </div>
+
+    <div class="playback">
+      <button class="pb-btn" aria-label="First move">⏮</button>
+      <button class="pb-btn" aria-label="Previous">◀</button>
+      <button class="pb-btn pb-btn--play" aria-label="Play">▶</button>
+      <button class="pb-btn" aria-label="Next">▶</button>
+      <button class="pb-btn" aria-label="Last move">⏭</button>
+    </div>
+  </main>
+
+  <aside class="side-panel">
+    <section class="panel">
+      <div class="panel__label">Engine · Depth 22</div>
+      <div class="engine__eval">+1.4</div>
+      <div class="engine__line">Be3 Be7 Qd2 O-O O-O-O Nbd7</div>
+      <div class="multi-pv">
+        <div class="pv"><div class="pv__label">Line 1</div><div class="pv__eval">+1.4</div></div>
+        <div class="pv"><div class="pv__label">Line 2</div><div class="pv__eval">+0.9</div></div>
+        <div class="pv"><div class="pv__label">Line 3</div><div class="pv__eval">+0.6</div></div>
+      </div>
+    </section>
+
+    <section class="panel moves">
+      <div class="panel__label">Moves</div>
+      <div class="moves__grid">
+        <span class="moves__num">1.</span><span>e4</span><span>c5</span>
+        <span class="moves__num">2.</span><span>Nf3</span><span>d6</span>
+        <span class="moves__num">3.</span><span>d4</span><span>cxd4</span>
+        <span class="moves__num">4.</span><span>Nxd4</span><span class="moves__bad">Nc6?</span>
+        <span class="moves__num">5.</span><span class="moves__current">Nc3</span><span class="moves__inaccurate">a6?!</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__label">Accuracy</div>
+      <div class="accuracy">
+        <div class="accuracy__row">
+          <span class="accuracy__black">Captain Rook</span>
+          <span class="accuracy__pct">71%</span>
+        </div>
+        <div class="accuracy__row">
+          <span class="accuracy__white">You</span>
+          <span class="accuracy__pct">88%</span>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+</div>
+
+<script>
+  const board = document.getElementById('board');
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'sq--light' : 'sq--dark');
+      if (r === 2 && c === 3) sq.classList.add('sq--bad');  // bad move highlight
+      if (r === 4 && c === 2) sq.classList.add('sq--good'); // good move highlight
+      board.appendChild(sq);
+    }
+  }
+</script>
+
+</body>
+</html>

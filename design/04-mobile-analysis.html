@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knightly — Analysis (Mobile)</title>
+<style>
+  :root {
+    --bg-app: #1f1d1a;
+    --bg-surface: #2a2722;
+    --bg-surface-2: #1a1815;
+    --bg-elevated: #3a3631;
+    --text-primary: #e8e6e1;
+    --text-secondary: #d4d2cb;
+    --text-muted: #8a8780;
+    --accent: #4a8a3f;
+    --player-white: #5DCAA5;
+    --player-black: #AFA9EC;
+    --danger: #E24B4A;
+    --warning: #BA7517;
+    --info: #185FA5;
+    --board-light: #d8b48a;
+    --board-dark: #8b5e3c;
+    --highlight-good: rgba(29,158,117,0.55);
+    --highlight-bad: rgba(163,45,45,0.6);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding: var(--space-3);
+    gap: var(--space-2);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .topbar__back {
+    background: transparent; border: none;
+    color: var(--text-secondary);
+    font-size: 1rem; padding: var(--space-1);
+    cursor: pointer; min-width: 32px; min-height: 32px;
+  }
+  .topbar__title { font-size: 0.75rem; }
+  .topbar__progress {
+    margin-left: auto;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+
+  /* HORIZONTAL EVAL BAR */
+  .eval-bar-h {
+    display: flex;
+    height: 14px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .eval-bar-h__white { background: var(--text-secondary); transition: flex 0.3s; }
+  .eval-bar-h__black { background: var(--bg-surface-2); transition: flex 0.3s; }
+  .eval-bar-h__readout {
+    position: absolute;
+    top: 50%; transform: translate(-50%, -50%);
+    font-size: 0.5625rem; font-weight: 500;
+    color: #1a1815; background: var(--text-secondary);
+    padding: 0 var(--space-1);
+    border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* PLAYER CARDS */
+  .player-card {
+    display: flex; align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.625rem; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .avatar--opp { background: var(--player-black); color: #1a1a1a; }
+  .avatar--me { background: var(--player-white); color: #1a1a1a; }
+  .player-name { font-size: 0.6875rem; }
+  .move-tags { margin-left: auto; display: flex; gap: var(--space-1); font-size: 0.625rem; }
+  .tag { padding: 1px 5px; border-radius: 3px; color: #fff; font-variant-numeric: tabular-nums; }
+  .tag--blunder { background: #A32D2D; }
+  .tag--mistake { background: var(--warning); }
+  .tag--brilliant { background: #1D9E75; }
+  .tag--good { background: var(--info); }
+
+  /* BOARD */
+  .board-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .board {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: min(100%, 100vh - 320px);
+    max-height: 100%;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    overflow: hidden;
+  }
+  .sq--light { background: var(--board-light); }
+  .sq--dark { background: var(--board-dark); }
+  .sq--bad { background: var(--highlight-bad); }
+  .sq--good { background: var(--highlight-good); }
+
+  /* ENGINE STRIP */
+  .engine-strip {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    flex-shrink: 0;
+  }
+  .engine-strip__top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: var(--space-1);
+  }
+  .engine-strip__label { font-size: 0.5625rem; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  .engine-strip__eval { font-size: 0.8125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .engine-strip__line {
+    font-size: 0.625rem; color: var(--text-muted);
+    font-family: ui-monospace, "SF Mono", monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex; gap: var(--space-1);
+    background: var(--bg-surface);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1; background: transparent; border: none;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) 0;
+    font-size: 0.625rem;
+    cursor: pointer;
+    min-height: 36px;
+  }
+  .tab--active { background: var(--accent); color: #fff; }
+
+  /* PLAYBACK */
+  .playback {
+    display: flex; gap: var(--space-1);
+    justify-content: center;
+    padding: var(--space-2) 0 0;
+    flex-shrink: 0;
+  }
+  .pb-btn {
+    background: var(--bg-surface); border: 1px solid var(--bg-elevated);
+    color: var(--text-secondary);
+    flex: 1; max-width: 60px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    min-height: 44px; /* iOS tap target */
+  }
+  .pb-btn--play { background: var(--accent); border: none; color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="topbar">
+    <button class="topbar__back" aria-label="Back">←</button>
+    <span class="topbar__title">Game review</span>
+    <span class="topbar__progress">Move 9 / 32</span>
+  </div>
+
+  <div class="eval-bar-h" aria-label="Evaluation: +1.4">
+    <div class="eval-bar-h__white" style="flex: 0.65"></div>
+    <div class="eval-bar-h__black" style="flex: 0.35"></div>
+    <div class="eval-bar-h__readout" style="left: 65%">+1.4</div>
+  </div>
+
+  <div class="player-card">
+    <div class="avatar avatar--opp">CR</div>
+    <span class="player-name">Captain Rook</span>
+    <div class="move-tags">
+      <span class="tag tag--blunder">2 ?</span>
+      <span class="tag tag--mistake">3 ?!</span>
+    </div>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="player-card">
+    <div class="avatar avatar--me">YO</div>
+    <span class="player-name">You</span>
+    <div class="move-tags">
+      <span class="tag tag--brilliant">1 ★</span>
+      <span class="tag tag--good">88%</span>
+    </div>
+  </div>
+
+  <div class="engine-strip">
+    <div class="engine-strip__top">
+      <span class="engine-strip__label">Engine · D22</span>
+      <span class="engine-strip__eval">+1.4</span>
+    </div>
+    <div class="engine-strip__line">Be3 Be7 Qd2 O-O O-O-O Nbd7</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab tab--active">Moves</button>
+    <button class="tab">Lines</button>
+    <button class="tab">Stats</button>
+  </div>
+
+  <div class="playback">
+    <button class="pb-btn" aria-label="First">⏮</button>
+    <button class="pb-btn" aria-label="Previous">◀</button>
+    <button class="pb-btn pb-btn--play" aria-label="Play">▶</button>
+    <button class="pb-btn" aria-label="Next">▶</button>
+    <button class="pb-btn" aria-label="Last">⏭</button>
+  </div>
+
+</div>
+
+<script>
+  const board = document.getElementById('board');
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'sq--light' : 'sq--dark');
+      if (r === 2 && c === 3) sq.classList.add('sq--bad');
+      if (r === 4 && c === 2) sq.classList.add('sq--good');
+      board.appendChild(sq);
+    }
+  }
+</script>
+
+</body>
+</html>

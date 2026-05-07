@@ -83,7 +83,7 @@ export default function Home() {
 
           {/* Play online hero card */}
           <div
-            onClick={() => requireAuth(() => navigate('/play/online'))}
+            onClick={() => requireAuth(() => navigate('/play/online', { state: { timeControl: selectedTime } }))}
             className="relative overflow-hidden rounded-hero border-half border-border-brand px-4 md:px-5 py-4 cursor-pointer [background:linear-gradient(135deg,rgba(91,141,239,0.18)_0%,rgba(163,116,240,0.10)_100%)]"
           >
             <div className="absolute -top-5 -right-5 w-[100px] h-[100px] rounded-full pointer-events-none [background:radial-gradient(circle,rgba(91,141,239,0.25)_0%,transparent_70%)]" />

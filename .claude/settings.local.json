@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(pnpm build *)",
-      "Bash(timeout 8 npx tsx src/index.ts)"
+      "Bash(timeout 8 npx tsx src/index.ts)",
+      "Bash(npx tsc *)"
     ]
   }
 }

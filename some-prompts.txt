@@ -1,0 +1,15 @@
+I tested the updates on dev url but there are still many bugs.
+-No matter what time format players select, the game always starts for 10+0 time format. and as it starts for 10+0 format - iwas not able to check if the timeincrement feature is working or not. Make changes so that the game begins with the time format the user has selected for and only players who have selctedt the same time formats gets connected with each other in the room to play the game.
+-While playing the live game if a user accidently clicks on the home button- he immediately exits the game and the other player wins the game. Implement a pop up specifically for only when game is live and if the user hits home them he gets prompted for are you sure you want to abort the game option, if he selects yes then abort the game and the other play shall win.
+-When playing the game, there is no option fo the resign button- add it.
+-We need massive changes in the UI but for now fix these
+   -- the board is oversized and its gets out of the screenit should be placed arount center of the screen     
+       and a little bit left side, and the move history area is at the bottom of the chess board, which looks      
+       really ugly, its should be aligned right next to the chess board and match the height of the board, take    
+       inspiration for the game live play UI from the image i am uploading.
+   --everytime a move is played, the screen jumps to the bottom to showthe update in the move history 
+      panel which is not supposed to happen, the focus should not shift from the board at all cost.
+   --the move history is gettin stored in a 2 column n rows format, whic makes it lengthy and ugly to look  
+      at, it should be 
+   --make sure that the whole UI is dynamic and responsive, if the size is reduced to the screen size of the  
+      mobile then the move history panel shift at the bottom of the board dynamically 

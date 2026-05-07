@@ -5,29 +5,47 @@ interface MoveListProps {
   moves: MoveRecord[]
   onSeek?: (fen: string, index: number) => void
   currentIndex?: number
+  noAutoScroll?: boolean
+  horizontal?: boolean
 }
 
-export default function MoveList({ moves, onSeek, currentIndex }: MoveListProps) {
+export default function MoveList({
+  moves,
+  onSeek,
+  currentIndex,
+  noAutoScroll,
+  horizontal,
+}: MoveListProps) {
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (noAutoScroll) return
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [moves.length])
+  }, [moves.length, noAutoScroll])
 
   if (moves.length === 0) {
-    return (
-      <div style={styles.empty}>No moves yet</div>
-    )
+    return <div style={styles.empty}>No moves yet</div>
   }
 
   // Group into pairs: [white, black]
   const pairs: { white: MoveRecord; black?: MoveRecord; number: number }[] = []
   for (let i = 0; i < moves.length; i += 2) {
-    pairs.push({
-      number: moves[i].moveNumber,
-      white: moves[i],
-      black: moves[i + 1],
-    })
+    pairs.push({ number: moves[i].moveNumber, white: moves[i], black: moves[i + 1] })
+  }
+
+  if (horizontal) {
+    return (
+      <div style={horizStyles.container}>
+        {pairs.map((pair) => (
+          <span key={pair.number} style={horizStyles.group}>
+            <span style={horizStyles.num}>{pair.number}.</span>
+            <span style={horizStyles.move}>{pair.white.san}</span>
+            {pair.black && <span style={horizStyles.move}>{pair.black.san}</span>}
+          </span>
+        ))}
+        <div ref={endRef} />
+      </div>
+    )
   }
 
   return (
@@ -72,7 +90,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   empty: {
     color: 'var(--text)',
-    fontSize: '14px',
+    opacity: 0.5,
+    fontSize: '13px',
     padding: '16px',
     textAlign: 'center',
   },
@@ -84,9 +103,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   moveNumber: {
     color: 'var(--text)',
+    opacity: 0.45,
     width: '28px',
     flexShrink: 0,
-    fontSize: '13px',
+    fontSize: '12px',
   },
   move: {
     padding: '2px 8px',
@@ -95,9 +115,40 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     color: 'var(--text-h)',
     transition: 'background 0.1s',
+    fontSize: '13px',
   },
   active: {
     background: 'var(--accent-bg)',
     color: 'var(--accent)',
+  },
+}
+
+const horizStyles: Record<string, React.CSSProperties> = {
+  container: {
+    display: 'flex',
+    flexWrap: 'nowrap',
+    gap: '0',
+    overflowX: 'auto',
+    fontFamily: 'var(--mono)',
+    fontSize: '13px',
+    color: 'var(--text-h)',
+    padding: '0 2px',
+    alignItems: 'center',
+    whiteSpace: 'nowrap',
+    scrollbarWidth: 'none',
+  },
+  group: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '3px',
+    marginRight: '10px',
+    flexShrink: 0,
+  },
+  num: {
+    opacity: 0.4,
+    fontSize: '12px',
+  },
+  move: {
+    padding: '1px 3px',
   },
 }

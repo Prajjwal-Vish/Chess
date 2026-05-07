@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knightly — Live Play (Web)</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS — copy these into your real app's theme system
+     ============================================================ */
+  :root {
+    /* Surfaces */
+    --bg-app: #1f1d1a;
+    --bg-surface: #2a2722;
+    --bg-surface-2: #1a1815;
+    --bg-elevated: #3a3631;
+
+    /* Text */
+    --text-primary: #e8e6e1;
+    --text-secondary: #d4d2cb;
+    --text-muted: #8a8780;
+
+    /* Brand & semantic */
+    --accent: #4a8a3f;
+    --accent-hover: #5a9a4f;
+    --player-white: #5DCAA5;
+    --player-black: #AFA9EC;
+    --danger: #E24B4A;
+    --warning: #BA7517;
+
+    /* Board */
+    --board-light: #d8b48a;
+    --board-dark: #8b5e3c;
+    --board-highlight: rgba(74,138,63,0.4);
+
+    /* Spacing scale (rem-based, NOT px — scales with user font size) */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+
+    /* Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+
+    /* Layout — these drive responsiveness */
+    --nav-width: clamp(60px, 12vw, 200px);
+    --side-panel-width: clamp(220px, 22vw, 320px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     LAYOUT — three-column grid, board takes remaining space
+     ============================================================ */
+  .app {
+    display: grid;
+    grid-template-columns: var(--nav-width) 1fr var(--side-panel-width);
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport unit — handles mobile browser chrome */
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  /* ============================================================
+     LEFT NAV
+     ============================================================ */
+  .nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+  .nav__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .nav__logo {
+    width: 18px; height: 18px;
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .nav__brand-name { font-size: 0.875rem; font-weight: 500; }
+  .nav__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav__item:hover { color: var(--text-secondary); background: var(--bg-surface); }
+  .nav__item--active { color: var(--text-secondary); background: var(--bg-surface); }
+
+  /* Hide nav labels on narrow screens */
+  @media (max-width: 900px) {
+    .nav__label, .nav__brand-name { display: none; }
+    .nav__item { justify-content: center; padding: var(--space-2); }
+    .nav__brand { justify-content: center; }
+  }
+
+  /* ============================================================
+     CENTER COLUMN — board + player cards
+     ============================================================ */
+  .play-area {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: 0;
+  }
+  .player-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .avatar--opp { background: var(--player-black); color: #1a1a1a; }
+  .avatar--me { background: var(--player-white); color: #1a1a1a; }
+  .player-name { font-size: 0.8125rem; }
+  .player-rating { color: var(--text-muted); }
+
+  .clock {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-surface);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+  }
+  .clock--active { background: var(--accent); color: #fff; }
+
+  /* THE BOARD — this is the critical part for responsiveness.
+     It uses aspect-ratio:1 so it stays square, and min(...) caps
+     it so it never exceeds the available viewport height. */
+  .board-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .board {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: min(100%, calc(100vh - 180px)); /* never taller than viewport allows */
+    max-height: 100%;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    overflow: hidden;
+  }
+  .sq--light { background: var(--board-light); }
+  .sq--dark { background: var(--board-dark); }
+  .sq--highlight { background: var(--board-highlight); }
+
+  /* ============================================================
+     RIGHT SIDE PANEL — moves + chat + actions
+     ============================================================ */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    min-height: 0;
+  }
+  .panel {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    min-height: 0;
+  }
+  .panel__label {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: var(--space-2);
+    text-transform: uppercase;
+  }
+
+  .moves {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .moves__grid {
+    display: grid;
+    grid-template-columns: 1.5rem 1fr 1fr;
+    gap: var(--space-1) var(--space-2);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .moves__num { color: var(--text-muted); }
+  .moves__current {
+    background: var(--accent);
+    color: #fff;
+    padding: 0 var(--space-1);
+    border-radius: 3px;
+  }
+
+  .chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
+  }
+  .chat__messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: 0.75rem;
+  }
+  .chat__sender { font-weight: 500; }
+  .chat__sender--opp { color: var(--player-black); }
+  .chat__sender--me { color: var(--player-white); }
+  .chat__input-row {
+    display: flex;
+    gap: var(--space-1);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--bg-elevated);
+  }
+  .chat__input {
+    flex: 1;
+    background: var(--bg-app);
+    border: 1px solid var(--bg-elevated);
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.6875rem;
+    min-width: 0;
+  }
+  .chat__send {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-3);
+    font-size: 0.6875rem;
+    cursor: pointer;
+  }
+
+  .actions { display: flex; gap: var(--space-2); flex-shrink: 0; }
+  .action-btn {
+    flex: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .action-btn:hover { background: var(--bg-elevated); }
+
+  /* ============================================================
+     RESPONSIVE BREAKPOINTS
+     Below 700px we collapse to mobile layout (see mobile file)
+     ============================================================ */
+  @media (max-width: 700px) {
+    .app { display: none; }
+    body::before {
+      content: "This is the WEB layout. View 03-mobile-live-play.html for mobile.";
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 2rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- LEFT NAV -->
+  <nav class="nav" aria-label="Main navigation">
+    <div class="nav__brand">
+      <div class="nav__logo"></div>
+      <span class="nav__brand-name">Knightly</span>
+    </div>
+    <div class="nav__item nav__item--active"><span>♟</span><span class="nav__label">Play</span></div>
+    <div class="nav__item"><span>⚡</span><span class="nav__label">Puzzles</span></div>
+    <div class="nav__item"><span>📚</span><span class="nav__label">Learn</span></div>
+    <div class="nav__item"><span>📊</span><span class="nav__label">Analyze</span></div>
+    <div class="nav__item"><span>👥</span><span class="nav__label">Friends</span></div>
+  </nav>
+
+  <!-- CENTER: BOARD + PLAYER CARDS -->
+  <main class="play-area">
+    <div class="player-card">
+      <div class="avatar avatar--opp">CR</div>
+      <span class="player-name">Captain Rook <span class="player-rating">(650)</span></span>
+      <span class="clock">04:32</span>
+    </div>
+
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="player-card">
+      <div class="avatar avatar--me">YO</div>
+      <span class="player-name">You <span class="player-rating">(720)</span></span>
+      <span class="clock clock--active">05:18</span>
+    </div>
+  </main>
+
+  <!-- RIGHT SIDE PANEL -->
+  <aside class="side-panel">
+    <section class="panel moves">
+      <div class="panel__label">Moves</div>
+      <div class="moves__grid">
+        <span class="moves__num">1.</span><span>e4</span><span>c5</span>
+        <span class="moves__num">2.</span><span>Nf3</span><span>d6</span>
+        <span class="moves__num">3.</span><span>d4</span><span>cxd4</span>
+        <span class="moves__num">4.</span><span>Nxd4</span><span>Nf6</span>
+        <span class="moves__num">5.</span><span>Nc3</span><span class="moves__current">a6</span>
+      </div>
+    </section>
+
+    <section class="panel chat">
+      <div class="panel__label">Chat</div>
+      <div class="chat__messages">
+        <div><span class="chat__sender chat__sender--opp">Captain Rook:</span> gl hf</div>
+        <div><span class="chat__sender chat__sender--me">You:</span> you too 👋</div>
+        <div><span class="chat__sender chat__sender--opp">Captain Rook:</span> nice opening</div>
+      </div>
+      <div class="chat__input-row">
+        <input class="chat__input" placeholder="Say something..." aria-label="Chat message">
+        <button class="chat__send" aria-label="Send">→</button>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="action-btn">⚐ Resign</button>
+      <button class="action-btn">½ Draw</button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  // Generate the 8x8 board pattern programmatically — never hard-code 64 divs
+  const board = document.getElementById('board');
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'sq--light' : 'sq--dark');
+      // Example highlight on e7-e5 (rows 1,3 col 4 in display coords)
+      if ((r === 0 && c === 4) || (r === 1 && c === 4)) sq.classList.add('sq--highlight');
+      board.appendChild(sq);
+    }
+  }
+</script>
+
+</body>
+</html>

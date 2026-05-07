@@ -1,0 +1,716 @@
+/* ====================================================
+   KNIGHTLY DESIGN TOKENS — scoped to .og-page
+   Overrides shared vars so MoveList/child components
+   inherit the Knightly palette automatically.
+   ==================================================== */
+.og-page {
+  /* Surfaces */
+  --kn-bg:         #1f1d1a;
+  --kn-surface:    #2a2722;
+  --kn-elevated:   #3a3631;
+  /* Text */
+  --kn-text:       #e8e6e1;
+  --kn-text-sec:   #d4d2cb;
+  --kn-text-muted: #8a8780;
+  /* Brand */
+  --kn-accent:     #4a8a3f;
+  --kn-accent-h:   #5a9a4f;
+  /* Player */
+  --kn-player-w:   #5DCAA5;
+  --kn-player-b:   #AFA9EC;
+  /* Semantic */
+  --kn-danger:     #E24B4A;
+  --kn-warning:    #BA7517;
+  /* Spacing */
+  --kn-sp1: 0.25rem;
+  --kn-sp2: 0.5rem;
+  --kn-sp3: 0.75rem;
+  --kn-sp4: 1rem;
+  /* Radius */
+  --kn-r-sm: 4px;
+  --kn-r-md: 6px;
+  --kn-r-lg: 12px;
+  /* Layout */
+  --kn-nav-w:  clamp(60px, 12vw, 200px);
+  --kn-side-w: clamp(220px, 22vw, 320px);
+
+  /* Shared-variable overrides so MoveList / ui components
+     pick up Knightly colours without needing to be rewritten */
+  --accent:    var(--kn-accent);
+  --accent-bg: rgba(74, 138, 63, 0.15);
+  --text-h:    var(--kn-text);
+  --text:      var(--kn-text-muted);
+  --border:    rgba(255, 255, 255, 0.08);
+}
+
+/* ====================================================
+   PAGE SHELL — mobile-first, flex column
+   ==================================================== */
+.og-page {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--kn-bg);
+  color: var(--kn-text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  /* iOS safe-area insets — zero on desktop, effective on notched phones */
+  padding-top:    env(safe-area-inset-top);
+  padding-right:  env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left:   env(safe-area-inset-left);
+  box-sizing: border-box;
+}
+
+/* Nav and side panel hidden on mobile */
+.og-nav        { display: none; }
+.og-side-panel { display: none; }
+
+/* ====================================================
+   PLAY AREA — center column (flex column both layouts)
+   ==================================================== */
+.og-play-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kn-sp2);
+  padding: var(--kn-sp3);
+  /* Centres on wide phones / narrow tablets, capped at 600px */
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ====================================================
+   BOARD — critical sizing block
+   ==================================================== */
+
+/*
+  Mobile: wrapper is NOT flex:1. Its height is determined by its
+  content (the square board). This keeps player cards immediately
+  adjacent to the board edges with no gap.
+*/
+.og-board-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/*
+  The square constraint on mobile:
+  - width:100% fills the play-area width.
+  - max-width: calc(100dvh - 280px) caps at the remaining viewport
+    height so the board never causes overflow on short screens.
+    280px ≈ two player cards + result strip + moves strip + action row + gaps + padding.
+  - aspect-ratio:1 keeps it square — height always equals width.
+*/
+.og-board-inner {
+  width: 100%;
+  max-width: min(100%, calc(100dvh - 280px));
+  aspect-ratio: 1;
+  position: relative;
+  border-radius: var(--kn-r-md);
+  overflow: hidden;
+}
+
+/* ====================================================
+   MOBILE-ONLY ELEMENTS
+   ==================================================== */
+
+/* Horizontal scrolling moves strip */
+.og-moves-strip {
+  background: var(--kn-surface);
+  border-radius: var(--kn-r-md);
+  padding: var(--kn-sp2) var(--kn-sp3);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--kn-text-sec);
+  white-space: nowrap;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.og-moves-strip::-webkit-scrollbar { display: none; }
+
+/* 4-button action row */
+.og-action-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--kn-sp2);
+  flex-shrink: 0;
+}
+.og-action-btn {
+  background: var(--kn-surface);
+  border: 1px solid var(--kn-elevated);
+  color: var(--kn-text-sec);
+  border-radius: var(--kn-r-md);
+  padding: var(--kn-sp2) 0;
+  font-size: 1.125rem;
+  cursor: pointer;
+  min-height: 44px;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.og-action-btn:hover,
+.og-action-btn:active { background: var(--kn-elevated); }
+.og-action-btn:focus-visible {
+  outline: 2px solid var(--kn-accent);
+  outline-offset: 2px;
+}
+.og-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Chat peek strip (last message, non-functional until backend is ready) */
+.og-chat-peek {
+  background: var(--kn-surface);
+  border-radius: var(--kn-r-md) var(--kn-r-md) 0 0;
+  padding: var(--kn-sp2) var(--kn-sp3);
+  flex-shrink: 0;
+}
+.og-chat-peek__handle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--kn-sp2);
+}
+.og-chat-peek__handle::after {
+  content: "";
+  width: 28px;
+  height: 3px;
+  background: var(--kn-elevated);
+  border-radius: 2px;
+}
+.og-chat-peek__msg {
+  font-size: 0.6875rem;
+  color: var(--kn-text-muted);
+}
+.og-chat-peek__sender {
+  color: var(--kn-player-b);
+  font-weight: 500;
+}
+
+/* Result strip — mobile, shown between board and moves strip */
+.og-result-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--kn-sp2);
+  padding: var(--kn-sp2) var(--kn-sp3);
+  border-radius: var(--kn-r-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.og-result-strip-win  { background: rgba(29,158,117,0.18); color: #1d9e75; }
+.og-result-strip-lose { background: rgba(226,75,74,0.15);  color: var(--kn-danger); }
+.og-result-strip-draw { background: rgba(255,255,255,0.06); color: var(--kn-text-sec); }
+.og-result-reason {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* ====================================================
+   DESKTOP LAYOUT (≥701px) — 3-column grid
+   ==================================================== */
+@media (min-width: 701px) {
+  .og-page {
+    display: grid;
+    grid-template-columns: var(--kn-nav-w) 1fr var(--kn-side-w);
+    gap: var(--kn-sp3);
+    padding: var(--kn-sp3);
+  }
+
+  /* Center grid cell: remove mobile centering, vertically center the board+cards group */
+  .og-play-area {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+  }
+
+  /* Board wrapper: sized to its content (not flex-growing), horizontally centered */
+  .og-board-wrapper {
+    flex-shrink: 0;
+    justify-content: center;
+  }
+  /* Board square: cap to remaining viewport height on desktop */
+  .og-board-inner {
+    width: 100%;
+    max-width: min(100%, calc(100dvh - 180px));
+  }
+  /* Player cards match board column width so they don't stretch full column */
+  .og-play-area .pc-card {
+    max-width: min(100%, calc(100dvh - 180px));
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  /* Hide mobile-only strips */
+  .og-moves-strip,
+  .og-action-row,
+  .og-chat-peek,
+  .og-result-strip { display: none; }
+
+  /* Show nav */
+  .og-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kn-sp1);
+    min-width: 0;
+  }
+
+  /* Show side panel */
+  .og-side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kn-sp2);
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
+/* Nav labels visible only on wider desktop */
+@media (min-width: 701px) and (max-width: 899px) {
+  .og-nav__label,
+  .og-nav__brand-name { display: none; }
+  .og-nav__item       { justify-content: center; padding: var(--kn-sp2); }
+  .og-nav__brand      { justify-content: center; }
+}
+
+/* ====================================================
+   LEFT NAV
+   ==================================================== */
+.og-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--kn-sp2);
+  padding: var(--kn-sp2);
+  margin-bottom: var(--kn-sp2);
+}
+.og-nav__logo {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--kn-r-sm);
+  background: var(--kn-accent);
+  flex-shrink: 0;
+}
+.og-nav__brand-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--kn-text);
+  white-space: nowrap;
+}
+.og-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--kn-sp2);
+  padding: var(--kn-sp2) var(--kn-sp3);
+  font-size: 0.8125rem;
+  color: var(--kn-text-muted);
+  border-radius: var(--kn-r-md);
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.15s, color 0.15s;
+  min-height: 36px;
+}
+.og-nav__item:hover        { color: var(--kn-text-sec); background: var(--kn-surface); }
+.og-nav__item--active      { color: var(--kn-text-sec); background: var(--kn-surface); }
+.og-nav__item:disabled     { opacity: 0.4; cursor: default; }
+.og-nav__item:focus-visible {
+  outline: 2px solid var(--kn-accent);
+  outline-offset: 2px;
+}
+
+/* ====================================================
+   RIGHT SIDE PANEL — panels, chat, action buttons
+   ==================================================== */
+.og-panel {
+  background: var(--kn-surface);
+  border-radius: var(--kn-r-md);
+  padding: var(--kn-sp3);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.og-panel__label {
+  font-size: 0.6875rem;
+  color: var(--kn-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: var(--kn-sp2);
+  flex-shrink: 0;
+}
+
+/* Header row: label on left, nav buttons on right */
+.og-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--kn-sp2);
+  flex-shrink: 0;
+}
+.og-panel__header .og-panel__label { margin-bottom: 0; }
+
+.og-nav-btns {
+  display: flex;
+  gap: 2px;
+}
+.og-nav-btn {
+  background: transparent;
+  border: 1px solid var(--kn-elevated);
+  color: var(--kn-text-muted);
+  border-radius: var(--kn-r-sm);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.625rem;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+.og-nav-btn:hover:not(:disabled) {
+  background: var(--kn-elevated);
+  color: var(--kn-text);
+}
+.og-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+/* Wrapper that lets MoveList (flex:1, overflow-y:auto) scroll correctly */
+.og-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Moves panel takes more space */
+.og-panel--moves { flex: 2; }
+
+/* Chat panel */
+.og-panel--chat {
+  flex: 1;
+  min-height: 140px;
+}
+.og-chat__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kn-sp2);
+  font-size: 0.75rem;
+  color: var(--kn-text-sec);
+  margin-bottom: var(--kn-sp2);
+}
+.og-chat__empty {
+  color: var(--kn-text-muted);
+  font-size: 0.6875rem;
+  font-style: italic;
+}
+.og-chat__sender--opp { color: var(--kn-player-b); font-weight: 500; }
+.og-chat__sender--me  { color: var(--kn-player-w); font-weight: 500; }
+.og-chat__input-row {
+  display: flex;
+  gap: var(--kn-sp1);
+  padding-top: var(--kn-sp2);
+  border-top: 1px solid var(--kn-elevated);
+  flex-shrink: 0;
+}
+.og-chat__input {
+  flex: 1;
+  min-width: 0;
+  background: var(--kn-bg);
+  border: 1px solid var(--kn-elevated);
+  color: var(--kn-text-sec);
+  border-radius: var(--kn-r-sm);
+  padding: var(--kn-sp1) var(--kn-sp2);
+  font-size: 0.6875rem;
+  font-family: inherit;
+}
+.og-chat__input::placeholder { color: var(--kn-text-muted); }
+.og-chat__input:focus {
+  outline: none;
+  border-color: var(--kn-accent);
+}
+.og-chat__send {
+  flex-shrink: 0;
+  background: var(--kn-accent);
+  border: none;
+  color: #fff;
+  border-radius: var(--kn-r-sm);
+  padding: var(--kn-sp1) var(--kn-sp3);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.og-chat__send:hover { background: var(--kn-accent-h); }
+
+/* Action button row */
+.og-actions {
+  display: flex;
+  gap: var(--kn-sp2);
+  flex-shrink: 0;
+}
+.og-side-btn {
+  flex: 1;
+  background: var(--kn-surface);
+  border: 1px solid var(--kn-elevated);
+  color: var(--kn-text-sec);
+  border-radius: var(--kn-r-md);
+  padding: var(--kn-sp2);
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  min-height: 36px;
+}
+.og-side-btn:hover { background: var(--kn-elevated); }
+.og-side-btn--danger:hover {
+  background: rgba(226, 75, 74, 0.14);
+  color: var(--kn-danger);
+  border-color: rgba(226, 75, 74, 0.3);
+}
+.og-side-btn--accent {
+  background: var(--kn-accent);
+  border-color: transparent;
+  color: #fff;
+}
+.og-side-btn--accent:hover { background: var(--kn-accent-h); }
+
+/* Result banner inside side panel (desktop) */
+.og-result-banner {
+  padding: var(--kn-sp2) var(--kn-sp3);
+  border-radius: var(--kn-r-md);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.og-result-banner-win  { background: rgba(29,158,117,0.18); color: #1d9e75; }
+.og-result-banner-lose { background: rgba(226,75,74,0.15);  color: var(--kn-danger); }
+.og-result-banner-draw { background: rgba(255,255,255,0.06); color: var(--kn-text-sec); }
+
+/* ====================================================
+   OVERLAYS — idle / waiting / confirm dialogs
+   ==================================================== */
+.og-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 6, 0.85);
+  z-index: 50;
+  padding: var(--kn-sp4);
+}
+
+.og-card {
+  background: var(--kn-surface);
+  border: 1px solid var(--kn-elevated);
+  border-radius: var(--kn-r-lg);
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 260px;
+  max-width: 340px;
+  width: 90vw;
+}
+.og-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--kn-text);
+  margin: 0;
+}
+.og-card-sub {
+  font-size: 0.8125rem;
+  color: var(--kn-text-muted);
+  margin: 0;
+  text-align: center;
+}
+.og-error-text {
+  font-size: 0.75rem;
+  color: var(--kn-danger);
+  text-align: center;
+  margin: 0;
+}
+
+.og-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--kn-elevated);
+  border-top-color: var(--kn-accent);
+  animation: og-spin 0.8s linear infinite;
+}
+@keyframes og-spin { to { transform: rotate(360deg); } }
+
+/* Time control grid */
+.og-tc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.og-tc-btn {
+  padding: 8px 4px;
+  border-radius: var(--kn-r-md);
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
+  color: var(--kn-text-muted);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.og-tc-btn:hover { background: rgba(255,255,255,0.08); color: var(--kn-text-sec); }
+.og-tc-btn-active {
+  background: rgba(74,138,63,0.2);
+  border-color: rgba(74,138,63,0.5);
+  color: var(--kn-text);
+}
+.og-find-btn {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: var(--kn-r-md);
+  background: var(--kn-accent);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.og-find-btn:hover { background: var(--kn-accent-h); }
+.og-cancel-link {
+  font-size: 0.75rem;
+  color: var(--kn-text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+}
+.og-cancel-link:hover { color: var(--kn-text-sec); }
+
+.og-dialog-body {
+  font-size: 0.8125rem;
+  color: var(--kn-text-muted);
+  text-align: center;
+  margin: 0;
+  line-height: 1.55;
+}
+.og-dialog-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.og-dialog-cancel {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid var(--kn-elevated);
+  border-radius: var(--kn-r-md);
+  background: transparent;
+  color: var(--kn-text-sec);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.og-dialog-cancel:hover { background: var(--kn-elevated); }
+.og-dialog-confirm {
+  flex: 1;
+  padding: 9px;
+  border: none;
+  border-radius: var(--kn-r-md);
+  background: rgba(226, 75, 74, 0.85);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.og-dialog-confirm:hover { opacity: 0.85; }
+.og-dialog-confirm--warning { background: rgba(186, 117, 23, 0.9); }
+
+/* ====================================================
+   PROMOTION OVERLAY (absolute inside .og-board-inner)
+   ==================================================== */
+.og-promo-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.og-promo-box {
+  background: var(--kn-surface);
+  border: 1px solid var(--kn-elevated);
+  border-radius: var(--kn-r-lg);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.og-promo-label {
+  font-size: 0.6875rem;
+  color: var(--kn-text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+.og-promo-grid { display: flex; gap: 8px; }
+.og-promo-btn {
+  width: 68px;
+  height: 76px;
+  border: 1px solid var(--kn-elevated);
+  border-radius: var(--kn-r-md);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.og-promo-btn:hover {
+  background: rgba(74,138,63,0.15);
+  border-color: rgba(74,138,63,0.4);
+}
+.og-promo-symbol { font-size: 34px; line-height: 1; user-select: none; }
+.og-promo-name {
+  font-size: 0.625rem;
+  color: var(--kn-text-muted);
+  font-weight: 500;
+}

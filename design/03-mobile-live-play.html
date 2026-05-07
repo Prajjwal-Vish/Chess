@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Knightly — Live Play (Mobile)</title>
+<style>
+  :root {
+    --bg-app: #1f1d1a;
+    --bg-surface: #2a2722;
+    --bg-elevated: #3a3631;
+    --text-primary: #e8e6e1;
+    --text-secondary: #d4d2cb;
+    --text-muted: #8a8780;
+    --accent: #4a8a3f;
+    --player-white: #5DCAA5;
+    --player-black: #AFA9EC;
+    --danger: #E24B4A;
+    --warning: #BA7517;
+    --board-light: #d8b48a;
+    --board-dark: #8b5e3c;
+    --board-highlight: rgba(74,138,63,0.4);
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+    /* iOS safe-area handling */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* ============================================================
+     MOBILE LAYOUT — single column, flex-column
+     The whole screen is a flex column so everything sizes
+     proportionally regardless of phone size.
+     ============================================================ */
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh; /* CRITICAL on mobile — handles browser chrome */
+    padding: var(--space-3);
+    gap: var(--space-2);
+    max-width: 600px; /* prevents stretching on tablets */
+    margin: 0 auto;
+  }
+
+  /* Player cards stay fixed-height */
+  .player-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6875rem; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .avatar--opp { background: var(--player-black); color: #1a1a1a; }
+  .avatar--me { background: var(--player-white); color: #1a1a1a; }
+  .player-info { display: flex; flex-direction: column; }
+  .player-name { font-size: 0.75rem; }
+  .player-meta { font-size: 0.625rem; color: var(--text-muted); }
+  .clock {
+    margin-left: auto;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-surface);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+  }
+  .clock--active { background: var(--accent); color: #fff; }
+
+  /* BOARD — flex:1 means it takes all remaining vertical space.
+     aspect-ratio:1 + max-width keeps it square AND fits on screen. */
+  .board-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .board {
+    aspect-ratio: 1;
+    width: 100%;
+    max-width: min(100%, 100vh - 240px);
+    max-height: 100%;
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    overflow: hidden;
+  }
+  .sq--light { background: var(--board-light); }
+  .sq--dark { background: var(--board-dark); }
+  .sq--highlight { background: var(--board-highlight); }
+
+  /* MOVES STRIP — horizontal scrollable */
+  .moves-strip {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+  }
+  .moves-strip::-webkit-scrollbar { display: none; }
+  .moves-strip__num { color: var(--text-muted); }
+  .moves-strip__current { background: var(--accent); padding: 0 3px; border-radius: 2px; color: #fff; }
+
+  /* BOTTOM ACTION ROW — 4 equal buttons */
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .action-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--bg-elevated);
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) 0;
+    font-size: 1rem;
+    cursor: pointer;
+    min-height: 44px; /* iOS minimum tap target */
+    transition: background 0.15s;
+  }
+  .action-btn:hover, .action-btn:active { background: var(--bg-elevated); }
+
+  /* CHAT PEEK STRIP at the bottom */
+  .chat-peek {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    padding: var(--space-2) var(--space-3);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .chat-peek__handle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: var(--space-2);
+  }
+  .chat-peek__handle::after {
+    content: "";
+    width: 28px; height: 3px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
+  }
+  .chat-peek__msg { font-size: 0.6875rem; }
+  .chat-peek__sender { color: var(--player-black); font-weight: 500; }
+
+  /* ============================================================
+     OPTIONS BOTTOM SHEET (modal)
+     Hidden by default, slides up on tap of `⋯` button
+     ============================================================ */
+  .sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 10;
+  }
+  .sheet-overlay.is-open { opacity: 1; pointer-events: auto; }
+
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--bg-surface);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.25s ease-out;
+    z-index: 11;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .sheet.is-open { transform: translateY(0); }
+
+  .sheet__handle {
+    width: 32px; height: 3px;
+    background: var(--bg-elevated);
+    border-radius: 2px;
+    margin: 0 auto var(--space-3);
+  }
+  .sheet__label {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    padding: 0 var(--space-2) var(--space-1);
+    text-transform: uppercase;
+  }
+  .sheet__item {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3);
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    min-height: 44px;
+  }
+  .sheet__item:hover, .sheet__item:active { background: var(--bg-elevated); }
+  .sheet__icon { width: 20px; text-align: center; }
+  .sheet__divider {
+    height: 1px;
+    background: var(--bg-elevated);
+    margin: var(--space-1) var(--space-2);
+  }
+  .sheet__item--warning { color: var(--warning); }
+  .sheet__item--danger { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <div class="player-card">
+    <div class="avatar avatar--opp">CR</div>
+    <div class="player-info">
+      <span class="player-name">Captain Rook</span>
+      <span class="player-meta">650 · ♟♟♞ +3</span>
+    </div>
+    <span class="clock">04:32</span>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="player-card">
+    <div class="avatar avatar--me">YO</div>
+    <div class="player-info">
+      <span class="player-name">You</span>
+      <span class="player-meta">720</span>
+    </div>
+    <span class="clock clock--active">05:18</span>
+  </div>
+
+  <div class="moves-strip" aria-label="Move history">
+    <span class="moves-strip__num">1.</span> e4 c5
+    <span class="moves-strip__num">2.</span> Nf3 d6
+    <span class="moves-strip__num">3.</span> d4 cxd4
+    <span class="moves-strip__num">4.</span> Nxd4 <span class="moves-strip__current">Nf6</span>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn" aria-label="Previous move">‹</button>
+    <button class="action-btn" aria-label="Next move">›</button>
+    <button class="action-btn" aria-label="Chat">💬</button>
+    <button class="action-btn" aria-label="More options" id="options-btn">⋯</button>
+  </div>
+
+  <div class="chat-peek" id="chat-peek">
+    <div class="chat-peek__handle"></div>
+    <div class="chat-peek__msg">
+      <span class="chat-peek__sender">Captain Rook:</span> nice opening 👍
+    </div>
+  </div>
+
+</div>
+
+<!-- Options bottom sheet -->
+<div class="sheet-overlay" id="sheet-overlay"></div>
+<div class="sheet" id="sheet" role="dialog" aria-label="Game options">
+  <div class="sheet__handle"></div>
+  <div class="sheet__label">Game options</div>
+  <button class="sheet__item">
+    <span class="sheet__icon">↻</span> Flip board
+  </button>
+  <button class="sheet__item">
+    <span class="sheet__icon">⚙</span> Settings
+  </button>
+  <div class="sheet__divider"></div>
+  <button class="sheet__item sheet__item--warning">
+    <span class="sheet__icon">½</span> Offer draw
+  </button>
+  <button class="sheet__item sheet__item--danger">
+    <span class="sheet__icon">⚐</span> Resign
+  </button>
+</div>
+
+<script>
+  // Generate board
+  const board = document.getElementById('board');
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'sq--light' : 'sq--dark');
+      if ((r === 0 && c === 4) || (r === 1 && c === 3)) sq.classList.add('sq--highlight');
+      board.appendChild(sq);
+    }
+  }
+
+  // Bottom sheet behavior
+  const overlay = document.getElementById('sheet-overlay');
+  const sheet = document.getElementById('sheet');
+  const optionsBtn = document.getElementById('options-btn');
+
+  function openSheet() {
+    overlay.classList.add('is-open');
+    sheet.classList.add('is-open');
+  }
+  function closeSheet() {
+    overlay.classList.remove('is-open');
+    sheet.classList.remove('is-open');
+  }
+  optionsBtn.addEventListener('click', openSheet);
+  overlay.addEventListener('click', closeSheet);
+</script>
+
+</body>
+</html>
